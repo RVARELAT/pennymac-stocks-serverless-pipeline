@@ -228,10 +228,13 @@ def lambda_handler(event, context):
 
     if not API_KEY:
         raise RuntimeError("MASSIVE_API_KEY environment variable is missing.")
+    
+    if not TABLE_NAME:
+        raise RuntimeError("DYNAMODB_TABLE_NAME environment variable is missing.")
 
     top_mover = find_top_mover()
     
-    saved_item = save_top_mover_to_dynamodb(top_mover)
+    save_top_mover_to_dynamodb(top_mover)
 
     return {
         "statusCode": 200,
