@@ -15,11 +15,15 @@ import json
 import os
 import time
 from datetime import datetime, timezone
+from decimal import Decimal
 
+import boto3
 import requests
 
 
 API_KEY = os.getenv("MASSIVE_API_KEY")
+
+TABLE_NAME = os.getenv("DYNAMODB_TABLE_NAME")
 
 WATCHLIST = ["AAPL", "MSFT", "GOOGL", "AMZN", "TSLA", "NVDA"]
 
@@ -174,6 +178,43 @@ def find_top_mover():
 
     return top_mover
 
+def save_top_mover_to_dynamodb(top_mover):
+    """
+    Save the top mover result to DynamoDB.
+
+    DynamoDB is the AWS database for this project.
+
+    The item we save looks like:
+    {
+        "date": "2026-06-09",
+        "ticker": "TSLA",
+        "percent_change": "-3.49",
+        "close_price": "396.68"
+    }
+    """
+
+    if not TABLE_NAME:
+        raise RuntimeError("DYNAMODB_TABLE_NAME environment variable is missing.")
+
+    # Use boto3 to connect to the AWS DynamoDB service.
+    dynamodb = boto3.resource("dynamodb")
+    # From DynamoDB, use the specific table whose name is stored in TABLE_NAME.
+    table = dynamodb.Table(TABLE_NAME)
+    
+    item = {
+    "date": top_mover["date"],
+    "ticker": top_mover["ticker"],
+    "percent_change": Decimal(str(top_mover["percent_change"])),
+    "close_price": Decimal(str(top_mover["close_price"])),
+    }
+
+    table.put_item(Item=item)
+
+    print(f"Saved top mover to DynamoDB: {item}")
+
+    return item
+
+
 
 def lambda_handler(event, context):
     """
@@ -189,6 +230,8 @@ def lambda_handler(event, context):
         raise RuntimeError("MASSIVE_API_KEY environment variable is missing.")
 
     top_mover = find_top_mover()
+    
+    saved_item = save_top_mover_to_dynamodb(top_mover)
 
     return {
         "statusCode": 200,
