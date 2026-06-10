@@ -194,7 +194,8 @@ def find_top_mover():
                 f"{mover['percent_change']}% | "
                 f"close=${mover['close_price']}"
             )
-            time.sleep(1)
+            # Slow down between API calls to reduce free-tier rate limit issues.
+            time.sleep(12)
 
         except Exception as error:
             # If one stock fails, we print the error and keep going.
