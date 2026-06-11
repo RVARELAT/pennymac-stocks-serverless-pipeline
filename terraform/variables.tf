@@ -9,3 +9,9 @@ variable "dynamodb_table_name" {
   type        = string
   default     = "pennymac-stock-movers"
 }
+
+variable "massive_api_key" {
+  description = "API key for Massive stock data API"
+  type        = string
+  sensitive   = true
+}

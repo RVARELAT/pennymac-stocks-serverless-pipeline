@@ -16,9 +16,11 @@ import os
 import time
 from datetime import datetime, timezone
 from decimal import Decimal
+from urllib.error import HTTPError
+from urllib.parse import urlencode
+from urllib.request import Request, urlopen
 
 import boto3
-import requests
 
 
 API_KEY = os.getenv("MASSIVE_API_KEY")
@@ -73,29 +75,33 @@ def fetch_previous_day_data(ticker):
     }
 
     max_retries = 3
+    query_string = urlencode(params)
+    request_url = f"{url}?{query_string}"
 
     for attempt in range(max_retries):
-        response = requests.get(url, params=params, timeout=10)
+        try:
+            request = Request(request_url)
+            with urlopen(request, timeout=10) as response:
+                data = json.loads(response.read().decode("utf-8"))
+            break
 
-        if response.status_code == 429:
-            wait_time = 3 * (attempt + 1)
-            print(f"Rate limited for {ticker}. Waiting {wait_time} seconds...")
-            time.sleep(wait_time)
-            continue
+        except HTTPError as error:
+            if error.code == 429:
+                wait_time = 3 * (attempt + 1)
+                print(f"Rate limited for {ticker}. Waiting {wait_time} seconds...")
+                time.sleep(wait_time)
+                continue
 
-        if response.status_code >= 400:
             raise RuntimeError(
                 f"Massive API request failed for {ticker}. "
-                f"Status code: {response.status_code}"
+                f"Status code: {error.code}"
             )
 
-        break
     else:
         raise RuntimeError(
             f"Rate limit continued after {max_retries} attempts for {ticker}"
         )
 
-    data = response.json()
 
     if data.get("status") != "OK":
         raise ValueError(f"Massive returned status {data.get('status')} for {ticker}")
@@ -240,7 +246,7 @@ def lambda_handler(event, context):
         "statusCode": 200,
         "body": json.dumps(
             {
-                "message": "Top mover calculated successfully.",
+                "message": "Top mover calculated and saved successfully.",
                 "top_mover": top_mover,
             }
         ),

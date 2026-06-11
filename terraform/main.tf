@@ -4,6 +4,11 @@ terraform {
       source  = "hashicorp/aws"
       version = "~> 6.0"
     }
+
+    archive = {
+      source  = "hashicorp/archive"
+      version = "~> 2.7"
+    }
   }
 }
 
@@ -20,6 +25,86 @@ resource "aws_dynamodb_table" "stock_movers" {
   attribute {
     name = "date"
     type = "S"
+  }
+
+  tags = {
+    Project     = "pennymac-stocks-serverless-pipeline"
+    Environment = "dev"
+    ManagedBy   = "terraform"
+  }
+}
+
+data "archive_file" "ingest_lambda_zip" {
+  type        = "zip"
+  source_file = "${path.module}/../backend/ingest/handler.py"
+  output_path = "${path.module}/ingest_lambda.zip"
+}
+
+resource "aws_iam_role" "ingest_lambda_role" {
+  name = "pennymac-ingest-lambda-role"
+
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Action = "sts:AssumeRole"
+        Effect = "Allow"
+        Principal = {
+          Service = "lambda.amazonaws.com"
+        }
+      }
+    ]
+  })
+
+  tags = {
+    Project     = "pennymac-stocks-serverless-pipeline"
+    Environment = "dev"
+    ManagedBy   = "terraform"
+  }
+}
+
+resource "aws_iam_role_policy" "ingest_lambda_policy" {
+  name = "pennymac-ingest-lambda-policy"
+  role = aws_iam_role.ingest_lambda_role.id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect = "Allow"
+        Action = [
+          "dynamodb:PutItem"
+        ]
+        Resource = aws_dynamodb_table.stock_movers.arn
+      },
+      {
+        Effect = "Allow"
+        Action = [
+          "logs:CreateLogGroup",
+          "logs:CreateLogStream",
+          "logs:PutLogEvents"
+        ]
+        Resource = "*"
+      }
+    ]
+  })
+}
+
+resource "aws_lambda_function" "ingest_lambda" {
+  function_name = "pennymac-stock-mover-ingest"
+  role          = aws_iam_role.ingest_lambda_role.arn
+  handler       = "handler.lambda_handler"
+  runtime       = "python3.12"
+  timeout       = 120
+
+  filename         = data.archive_file.ingest_lambda_zip.output_path
+  source_code_hash = data.archive_file.ingest_lambda_zip.output_base64sha256
+
+  environment {
+    variables = {
+      MASSIVE_API_KEY     = var.massive_api_key
+      DYNAMODB_TABLE_NAME = aws_dynamodb_table.stock_movers.name
+    }
   }
 
   tags = {
