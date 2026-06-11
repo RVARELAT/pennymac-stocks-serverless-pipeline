@@ -13,3 +13,7 @@ output "ingest_lambda_name" {
   value       = aws_lambda_function.ingest_lambda.function_name
 }
 
+output "api_lambda_name" {
+  description = "Name of the API Lambda function"
+  value       = aws_lambda_function.api_lambda.function_name
+}

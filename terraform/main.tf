@@ -113,3 +113,83 @@ resource "aws_lambda_function" "ingest_lambda" {
     ManagedBy   = "terraform"
   }
 }
+
+
+data "archive_file" "api_lambda_zip" {
+  type        = "zip"
+  source_file = "${path.module}/../backend/api/handler.py"
+  output_path = "${path.module}/api_lambda.zip"
+}
+
+resource "aws_iam_role" "api_lambda_role" {
+  name = "pennymac-api-lambda-role"
+
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Action = "sts:AssumeRole"
+        Effect = "Allow"
+        Principal = {
+          Service = "lambda.amazonaws.com"
+        }
+      }
+    ]
+  })
+
+  tags = {
+    Project     = "pennymac-stocks-serverless-pipeline"
+    Environment = "dev"
+    ManagedBy   = "terraform"
+  }
+}
+
+resource "aws_iam_role_policy" "api_lambda_policy" {
+  name = "pennymac-api-lambda-policy"
+  role = aws_iam_role.api_lambda_role.id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect = "Allow"
+        Action = [
+          "dynamodb:Scan"
+        ]
+        Resource = aws_dynamodb_table.stock_movers.arn
+      },
+      {
+        Effect = "Allow"
+        Action = [
+          "logs:CreateLogGroup",
+          "logs:CreateLogStream",
+          "logs:PutLogEvents"
+        ]
+        Resource = "*"
+      }
+    ]
+  })
+}
+
+resource "aws_lambda_function" "api_lambda" {
+  function_name = "pennymac-stock-mover-api"
+  role          = aws_iam_role.api_lambda_role.arn
+  handler       = "handler.lambda_handler"
+  runtime       = "python3.12"
+  timeout       = 30
+
+  filename         = data.archive_file.api_lambda_zip.output_path
+  source_code_hash = data.archive_file.api_lambda_zip.output_base64sha256
+
+  environment {
+    variables = {
+      DYNAMODB_TABLE_NAME = aws_dynamodb_table.stock_movers.name
+    }
+  }
+
+  tags = {
+    Project     = "pennymac-stocks-serverless-pipeline"
+    Environment = "dev"
+    ManagedBy   = "terraform"
+  }
+}
