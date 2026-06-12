@@ -17,3 +17,8 @@ output "api_lambda_name" {
   description = "Name of the API Lambda function"
   value       = aws_lambda_function.api_lambda.function_name
 }
+
+output "api_gateway_url" {
+  description = "Base URL for the API Gateway HTTP API"
+  value       = aws_apigatewayv2_api.stocks_api.api_endpoint
+}
