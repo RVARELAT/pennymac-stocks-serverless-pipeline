@@ -31,6 +31,17 @@ function App() {
 
   const latestMover = movers[0];
 
+  const insightDirection =
+    latestMover && latestMover.percent_change >= 0 ? "up" : "down";
+  
+  const insightText = latestMover
+    ? `${latestMover.ticker} moved ${insightDirection} ${Math.abs(
+        latestMover.percent_change
+      )}% on ${latestMover.date}, making it the latest top mover in the watchlist. This dashboard displays the ${
+        movers.length
+      } most recent mover record${movers.length === 1 ? "" : "s"} stored in DynamoDB.`
+    : "";
+
   return (
     <main className="page">
       <section className="hero">
@@ -70,6 +81,15 @@ function App() {
               <p className="label">Close Price</p>
               <p className="price">${latestMover.close_price}</p>
             </div>
+          </section>
+
+          <section className="card insight-card">
+            <div>
+              <p className="label">Daily Insight</p>
+              <h2>Market Movement Summary</h2>
+            </div>
+
+            <p className="insight-text">{insightText}</p>
           </section>
 
           <section className="card">

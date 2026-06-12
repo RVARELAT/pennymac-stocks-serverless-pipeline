@@ -155,3 +155,23 @@ th {
     padding: 12px 6px;
   }
 }
+
+.insight-card {
+  display: grid;
+  grid-template-columns: 0.8fr 1.5fr;
+  gap: 24px;
+  align-items: center;
+}
+
+.insight-text {
+  color: #5b667a;
+  line-height: 1.7;
+  font-size: 1.05rem;
+  margin: 0;
+}
+
+@media (max-width: 760px) {
+  .insight-card {
+    grid-template-columns: 1fr;
+  }
+}
