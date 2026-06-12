@@ -244,3 +244,31 @@ resource "aws_lambda_permission" "allow_api_gateway_to_call_api_lambda" {
 
   source_arn = "${aws_apigatewayv2_api.stocks_api.execution_arn}/*/*"
 }
+
+
+
+resource "aws_cloudwatch_event_rule" "daily_stock_ingestion" {
+  name                = "pennymac-daily-stock-ingestion"
+  description         = "Runs the stock mover ingestion Lambda once per day"
+  schedule_expression = "cron(0 14 ? * MON-FRI *)"
+
+  tags = {
+    Project     = "pennymac-stocks-serverless-pipeline"
+    Environment = "dev"
+    ManagedBy   = "terraform"
+  }
+}
+
+resource "aws_cloudwatch_event_target" "daily_stock_ingestion_target" {
+  rule      = aws_cloudwatch_event_rule.daily_stock_ingestion.name
+  target_id = "pennymac-stock-mover-ingest"
+  arn       = aws_lambda_function.ingest_lambda.arn
+}
+
+resource "aws_lambda_permission" "allow_eventbridge_to_call_ingest_lambda" {
+  statement_id  = "AllowEventBridgeInvokeIngestLambda"
+  action        = "lambda:InvokeFunction"
+  function_name = aws_lambda_function.ingest_lambda.function_name
+  principal     = "events.amazonaws.com"
+  source_arn    = aws_cloudwatch_event_rule.daily_stock_ingestion.arn
+}

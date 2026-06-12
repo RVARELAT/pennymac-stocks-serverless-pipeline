@@ -22,3 +22,8 @@ output "api_gateway_url" {
   description = "Base URL for the API Gateway HTTP API"
   value       = aws_apigatewayv2_api.stocks_api.api_endpoint
 }
+
+output "eventbridge_rule_name" {
+  description = "Name of the EventBridge rule that schedules daily ingestion"
+  value       = aws_cloudwatch_event_rule.daily_stock_ingestion.name
+}
