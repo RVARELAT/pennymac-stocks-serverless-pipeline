@@ -27,3 +27,13 @@ output "eventbridge_rule_name" {
   description = "Name of the EventBridge rule that schedules daily ingestion"
   value       = aws_cloudwatch_event_rule.daily_stock_ingestion.name
 }
+
+output "frontend_bucket_name" {
+  description = "Name of the S3 bucket hosting the frontend"
+  value       = aws_s3_bucket.frontend_bucket.bucket
+}
+
+output "frontend_website_url" {
+  description = "S3 static website URL for the frontend"
+  value       = aws_s3_bucket_website_configuration.frontend_website.website_endpoint
+}
