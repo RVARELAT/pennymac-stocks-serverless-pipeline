@@ -42,6 +42,8 @@ The frontend displays:
 
 ## Architecture
 
+For a more detailed architecture breakdown, see `docs/architecture.md`.
+
 ```text
 EventBridge Schedule
         ↓
